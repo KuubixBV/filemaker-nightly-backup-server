@@ -9,6 +9,8 @@ LATEST_DOWNLOAD_URL = os.getenv('LATEST_DOWNLOAD_URL')
 UNZIP_DOWNLOAD = os.getenv('UNZIP_DOWNLOAD') == "True"
 STORAGE_PATH = os.getenv('STORAGE_PATH') or "storage"
 
+# TODO: USE SFTP WITH PARAMIKO
+
 
 def validate_environment_variables():
     if LATEST_DOWNLOAD_URL == "":
@@ -26,7 +28,7 @@ def get_latest_backup_url():
     try:
         # Use the latest_download_url to fetch the .json file
         response = requests.get(LATEST_DOWNLOAD_URL)
-        response.reaise_for_status()
+        response.raise_for_status()
 
         # Parse the file and exrtact the latest backup url
         latest_download_json = response.json()
@@ -40,7 +42,7 @@ def download_backup(file_location):
     try:
         # Use the latest_download_url to fetch the .json file
         response = requests.get(file_location)
-        response.reaise_for_status()
+        response.raise_for_status()
 
         filename = os.path.basename(file_location)
         filepath = os.path.join(STORAGE_PATH, filename)
