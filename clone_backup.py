@@ -14,10 +14,13 @@ SFTP_PASSWORD = os.getenv('SFTP_PASSWORD') or ""
 SFTP_HOST = os.getenv('SFTP_HOST') or ""
 SFTP_PORT = os.getenv('SFTP_PORT') or ""
 
-LATEST_DOWNLOAD_URL = os.getenv('LATEST_DOWNLOAD_URL')
-STORAGE_PATH = os.getenv('STORAGE_PATH') or "storage"
+LAST_BACKUP_DATABASE_DOWNLOAD_URL = os.getenv(
+    'LAST_BACKUP_DATABASE_DOWNLOAD_URL') or ""
+LAST_BACKUP_FILES_DOWNLOAD_URL = os.getenv(
+    'LAST_BACKUP_FILES_DOWNLOAD_URL') or ""
 
 # ZIP
+STORAGE_PATH = os.getenv('STORAGE_PATH') or "storage"
 ZIP_PASSWORD = os.getenv('ZIP_PASSWORD') or ""
 UNZIP = os.getenv('UNZIP') == "True"
 
@@ -25,6 +28,24 @@ UNZIP = os.getenv('UNZIP') == "True"
 ssh_client = paramiko.SSHClient()
 stdscr = None
 sftp = None
+
+
+def argv_parser():
+    # Parse command line arguments
+    # Currently only one supported is "--backup-type" database|files
+
+    backup_type = "database"
+
+    type_flag_present = "--backup-type" in sys.argv
+    if type_flag_present:
+        type_flag_index = sys.argv.index("--backup-type")
+        backup_type = sys.argv[type_flag_index + 1]
+
+    if backup_type not in ["database", "files"]:
+        print("Invalid backup type, must be one of database|files")
+        sys.exit(1)
+
+    return backup_type
 
 
 def validate_environment_variables():
@@ -41,7 +62,7 @@ def validate_environment_variables():
     if SFTP_PORT == "":
         return False
 
-    if LATEST_DOWNLOAD_URL == "":
+    if LAST_BACKUP_DATABASE_DOWNLOAD_URL == "" and LAST_BACKUP_FILES_DOWNLOAD_URL == "":
         return False
 
     return True
@@ -57,18 +78,43 @@ def get_latest_backup_url():
     # Use the latest_download_url to fetch the .json file
 
     try:
-        print("Downloading last backup.json")
-        json_path = os.path.join(STORAGE_PATH, "last_backup.json")
-        print(json_path)
-        print(LATEST_DOWNLOAD_URL)
-        sftp.get(LATEST_DOWNLOAD_URL, json_path)
+        # Determine backup type
+        backup_type = argv_parser()
+
+        print(f"Downloading last .json of type {backup_type}")
+
+        json_name = f"last_backup_{backup_type}.json"
+        json_path = os.path.join(STORAGE_PATH, json_name)
+
+        current_hash = ""
+        # Get the current hash from our pre-existing json
+        if os.path.exists(json_path):
+            with open(json_path, 'r') as json_file:
+                current_hash = json.load(json_file)['hash'] or ""
+
+        download_url = LAST_BACKUP_DATABASE_DOWNLOAD_URL
+        if backup_type == "files":
+            download_url = LAST_BACKUP_FILES_DOWNLOAD_URL
+
+        sftp.get(download_url, json_path)
 
         latest_backup = ""
+        should_download = True
+
         # Parse the file and exrtact the latest backup url
         with open(json_path, 'r') as latest_backup_location:
             latest = latest_backup_location.read()
             # Read json file
             latest_backup = json.loads(latest)['location'] or ""
+
+            if current_hash != "":
+                new_hash = json.loads(latest)['hash'] or ""
+                if new_hash == current_hash:
+                    should_download = False
+
+        if not should_download:
+            print("No new backup available, QUITTING...")
+            sys.exit(0)
 
         print(f"Last backup location is {latest_backup}")
         return latest_backup
