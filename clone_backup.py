@@ -21,12 +21,14 @@ STORAGE_PATH = os.getenv('STORAGE_PATH') or "storage"
 ZIP_PASSWORD = os.getenv('ZIP_PASSWORD') or ""
 UNZIP = os.getenv('UNZIP') == "True"
 
+# SSH Client
 ssh_client = paramiko.SSHClient()
 stdscr = None
 sftp = None
 
 
 def validate_environment_variables():
+    # Validate environment variables
     if SFTP_USERNAME == "":
         return False
 
@@ -46,14 +48,16 @@ def validate_environment_variables():
 
 
 def ensure_directory_exists(path):
+    # Create the directory if it doesn't exist
     if not os.path.exists(path):
         os.makedirs(path)
 
 
 def get_latest_backup_url():
+    # Use the latest_download_url to fetch the .json file
+
     try:
         print("Downloading last backup.json")
-        # Use the latest_download_url to fetch the .json file
         json_path = os.path.join(STORAGE_PATH, "last_backup.json")
         print(json_path)
         print(LATEST_DOWNLOAD_URL)
@@ -76,12 +80,15 @@ def get_latest_backup_url():
 
 
 def progress_callback(transferred, total):
+    # Display progress
+
     progress_callback.last_call = getattr(progress_callback, 'last_call', 0)
     progress_callback.start_time = getattr(
         progress_callback, 'start_time', time.time())
 
     percent_complete = transferred / total * 100
 
+    # Only update the screen if the percent_complete has changed by 0.1
     if percent_complete - progress_callback.last_call >= 0.1:
         elapsed_time = time.time() - progress_callback.start_time
         speed = transferred / elapsed_time
@@ -113,9 +120,12 @@ def progress_callback(transferred, total):
 
 
 def download_backup(file_location):
+    # Download the backup
     global stdscr
     try:
         print("Downloading backup...")
+
+        # Initialize curses
         stdscr = curses.initscr()
         curses.noecho()
         curses.cbreak()
@@ -125,6 +135,7 @@ def download_backup(file_location):
         file_path = os.path.join(STORAGE_PATH, file_name)
         sftp.get(file_location, file_path, callback=progress_callback)
 
+        # Restore terminal settings
         curses.echo()
         curses.nocbreak()
         curses.endwin()
@@ -142,6 +153,8 @@ def download_backup(file_location):
 
 
 def unzip_download(filepath):
+    # Unzip the backup
+
     try:
         with zipfile.ZipFile(filepath, 'r') as zip_ref:
             zip_ref.extractall(STORAGE_PATH, pwd=bytes(ZIP_PASSWORD, 'utf-8'))
@@ -152,6 +165,8 @@ def unzip_download(filepath):
 
 
 def initialize_ssh_client():
+    # Initialize the ssh client
+
     global sftp
     print("Initializing ssh client...")
     ssh_client.load_system_host_keys()
