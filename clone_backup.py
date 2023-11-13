@@ -1,6 +1,7 @@
 from dotenv import load_dotenv
+import subprocess
 import paramiko
-import zipfile
+import pexpect
 import curses
 import json
 import time
@@ -14,14 +15,19 @@ SFTP_PASSWORD = os.getenv('SFTP_PASSWORD') or ""
 SFTP_HOST = os.getenv('SFTP_HOST') or ""
 SFTP_PORT = os.getenv('SFTP_PORT') or ""
 
+
 LAST_BACKUP_DATABASE_DOWNLOAD_URL = os.getenv(
     'LAST_BACKUP_DATABASE_DOWNLOAD_URL') or ""
 LAST_BACKUP_FILES_DOWNLOAD_URL = os.getenv(
     'LAST_BACKUP_FILES_DOWNLOAD_URL') or ""
 
+#FILEMAKER
+FILEMAKER_PASSWORD = os.getenv('FILEMAKER_PASSWORD') or ""
+
 # ZIP
 STORAGE_PATH = os.getenv('STORAGE_PATH') or "storage"
 ZIP_PASSWORD = os.getenv('ZIP_PASSWORD') or ""
+ZIP_STORAGE_PATH = os.getenv('ZIP_STORAGE_PATH') or ""
 UNZIP = os.getenv('UNZIP') == "True"
 
 # SSH Client
@@ -63,6 +69,8 @@ def validate_environment_variables():
         return False
 
     if LAST_BACKUP_DATABASE_DOWNLOAD_URL == "" and LAST_BACKUP_FILES_DOWNLOAD_URL == "":
+        return False
+    if UNZIP == True and ZIP_STORAGE_PATH == "":
         return False
 
     return True
@@ -202,10 +210,9 @@ def unzip_download(filepath):
     # Unzip the backup
 
     try:
-        with zipfile.ZipFile(filepath, 'r') as zip_ref:
-            zip_ref.extractall(STORAGE_PATH, pwd=bytes(ZIP_PASSWORD, 'utf-8'))
-        print(f"Backup unzipped in {STORAGE_PATH}.")
-    except zipfile.BadZipFile as e:
+        subprocess.run(['7z', 'x', filepath, f'-o{ZIP_STORAGE_PATH}', f'-p{ZIP_PASSWORD}'], check=True)
+        print(f"Backup unzipped in {ZIP_STORAGE_PATH}.")
+    except subprocess.CalledProcessError as e:
         print(f"Error unzipping: {e}")
         sys.exit(1)
 
@@ -244,6 +251,20 @@ def main():
         if UNZIP:
             unzip_download(backup_file_path)
 
+            # Succesful zip!
+            # Remove zip
+            os.remove(backup_file_path)
+
+            # Execute fileMakerSetRights.sh
+            subprocess.run(['sudo ./fileMakerSetRights.sh'])
+
+            # Set database open
+            child = pexpect.spawn(fmsadmin OPEN /opt/FileMaker/FileMaker\ Server/Data/Databases/MasterApp.fmp12 -ukuadmin)
+            child.expect("password:")
+            child.sendline(FILEMAKER_PASSWORD)
+            child.expect(pexpect.EOF)
+            print(child.before.decode())
+
         pass
     finally:
         # Restore terminal settings
@@ -259,6 +280,9 @@ def main():
 
 
 if __name__ == "__main__":
+    subprocess.run(['sudo', 'sh', './fileMakerSetRights.sh'])
+    sys.exit(1)
+
     if not validate_environment_variables():
         print("Validation failed, check .env")
         sys.exit(1)
