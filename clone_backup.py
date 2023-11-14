@@ -255,11 +255,12 @@ def main():
             # Remove zip
             os.remove(backup_file_path)
 
+
             # Execute fileMakerSetRights.sh
             subprocess.run(['sudo ./fileMakerSetRights.sh'])
 
             # Set database open
-            child = pexpect.spawn(fmsadmin OPEN /opt/FileMaker/FileMaker\ Server/Data/Databases/MasterApp.fmp12 -ukuadmin)
+            child = pexpect.spawn(fmsadmin OPEN "/opt/FileMaker/FileMaker\ Server/Data/Databases/MasterApp.fmp12" -ukuadmin)
             child.expect("password:")
             child.sendline(FILEMAKER_PASSWORD)
             child.expect(pexpect.EOF)
@@ -280,9 +281,6 @@ def main():
 
 
 if __name__ == "__main__":
-    subprocess.run(['sudo', 'sh', './fileMakerSetRights.sh'])
-    sys.exit(1)
-
     if not validate_environment_variables():
         print("Validation failed, check .env")
         sys.exit(1)

@@ -30,3 +30,7 @@ Traceback (most recent call last):
   File "/home/kuadmin/dev/filemaker-nightly-backup-server/clone_backup.py", line 2, in <module>
     import paramiko
 ModuleNotFoundError: No module named 'paramiko'
+  File "/home/kuadmin/dev/filemaker-nightly-backup-server/clone_backup.py", line 263
+    child = pexpect.spawn(fmsadmin OPEN /opt/FileMaker/FileMaker\ Server/Data/Databases/MasterApp.fmp12 -ukuadmin)
+                                                                 ^
+SyntaxError: unexpected character after line continuation character
