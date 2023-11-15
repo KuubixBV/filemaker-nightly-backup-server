@@ -34,3 +34,43 @@ ModuleNotFoundError: No module named 'paramiko'
     child = pexpect.spawn(fmsadmin OPEN /opt/FileMaker/FileMaker\ Server/Data/Databases/MasterApp.fmp12 -ukuadmin)
                                                                  ^
 SyntaxError: unexpected character after line continuation character
+  File "/home/kuadmin/dev/filemaker-nightly-backup-server/clone_backup.py", line 263
+    child = pexpect.spawn(fmsadmin OPEN "/opt/FileMaker/FileMaker\ Server/Data/Databases/MasterApp.fmp12" -ukuadmin)
+                          ^^^^^^^^^^^^^
+SyntaxError: invalid syntax. Perhaps you forgot a comma?
+Initializing ssh client...
+SSH client initialized.
+Opening sftp connection...
+Sftp connection opened.
+Downloading last .json of type database
+Last backup location is /opt/FileMaker/FileMaker Server/Data/Databases/Backups/Daily/DAILY2023-11-14_17-40.zip
+Downloading backup...
+Closing connections...
+Traceback (most recent call last):
+  File "/home/kuadmin/dev/filemaker-nightly-backup-server/clone_backup.py", line 293, in <module>
+    main()
+  File "/home/kuadmin/dev/filemaker-nightly-backup-server/clone_backup.py", line 250, in main
+    backup_file_path = download_backup(latest_backup_url)
+  File "/home/kuadmin/dev/filemaker-nightly-backup-server/clone_backup.py", line 184, in download_backup
+    stdscr = curses.initscr()
+  File "/usr/lib/python3.10/curses/__init__.py", line 29, in initscr
+    setupterm(term=_os.environ.get("TERM", "unknown"),
+_curses.error: setupterm: could not find terminal
+Initializing ssh client...
+SSH client initialized.
+Opening sftp connection...
+Sftp connection opened.
+Downloading last .json of type database
+Last backup location is /opt/FileMaker/FileMaker Server/Data/Databases/Backups/Daily/DAILY2023-11-15_10-40.zip
+Downloading backup...
+Closing connections...
+Traceback (most recent call last):
+  File "/home/kuadmin/dev/filemaker-nightly-backup-server/clone_backup.py", line 293, in <module>
+    main()
+  File "/home/kuadmin/dev/filemaker-nightly-backup-server/clone_backup.py", line 250, in main
+    backup_file_path = download_backup(latest_backup_url)
+  File "/home/kuadmin/dev/filemaker-nightly-backup-server/clone_backup.py", line 184, in download_backup
+    stdscr = curses.initscr()
+  File "/usr/lib/python3.10/curses/__init__.py", line 29, in initscr
+    setupterm(term=_os.environ.get("TERM", "unknown"),
+_curses.error: setupterm: could not find terminal
