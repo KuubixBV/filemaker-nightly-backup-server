@@ -256,6 +256,13 @@ def main():
         backup_file_path = download_backup(latest_backup_url)
 
         if UNZIP:
+            child = pexpect.spawn('fmsadmin CLOSE "MasterApp.fmp12" -ukuadmin')
+            child.expect("password:")
+            child.sendline(FILEMAKER_PASSWORD)
+            child.expect(pexpect.EOF)
+            print("DONE")
+            print(child.before.decode())
+
             unzip_download(backup_file_path)
 
             # Succesful zip!
@@ -264,15 +271,16 @@ def main():
 
 
             # Execute fileMakerSetRights.sh
-            subprocess.run(['sudo sh /home/kuadmin/dev/filemaker-nightly-backup-server/fileMakerSetRights.sh'])
+            subprocess.run(['sh', '/home/kuadmin/dev/filemaker-nightly-backup-server/fileMakerSetRights.sh'])
 
             # Set database open
-            child = pexpect.spawn('fmsadmin OPEN "/opt/FileMaker/FileMaker\ Server/Data/Databases/MasterApp.fmp12" -ukuadmin')
+            print("SETTING OPEN")
+            child = pexpect.spawn('fmsadmin OPEN "MasterApp.fmp12" -ukuadmin')
             child.expect("password:")
             child.sendline(FILEMAKER_PASSWORD)
             child.expect(pexpect.EOF)
+            print("DONE")
             print(child.before.decode())
-
         pass
     finally:
         # Restore terminal settings
