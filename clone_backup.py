@@ -21,7 +21,7 @@ LAST_BACKUP_DATABASE_DOWNLOAD_URL = os.getenv(
 LAST_BACKUP_FILES_DOWNLOAD_URL = os.getenv(
     'LAST_BACKUP_FILES_DOWNLOAD_URL') or ""
 
-#FILEMAKER
+# FILEMAKER
 FILEMAKER_PASSWORD = os.getenv('FILEMAKER_PASSWORD') or ""
 
 # ZIP
@@ -36,7 +36,7 @@ ssh_client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
 stdscr = None
 sftp = None
 
-LOCAL=False
+LOCAL = False
 
 
 def argv_parser():
@@ -102,7 +102,7 @@ def get_latest_backup_url():
         if os.path.exists(json_path):
             with open(json_path, 'r') as json_file:
                 # Check if the file is a valid json
-                hahs = ""
+                hash = ""
                 try:
                     hash = json.load(json_file)['hash']
                 except json.JSONDecodeError as e:
@@ -203,7 +203,15 @@ def download_backup(file_location):
 
         # Use the latest_download_url to fetch the .json file
         file_name = file_location.split("/")[-1]
-        file_path = os.path.join(STORAGE_PATH, file_name)
+        backup_type = argv_parser()
+
+        storage_path = STORAGE_PATH
+        if backup_type == "files":
+            storage_path += "/files"
+        else:
+            storage_path += "/database"
+
+        file_path = os.path.join(storage_path, file_name)
         sftp.get(file_location, file_path, callback=progress_callback)
 
         if LOCAL:
@@ -229,7 +237,8 @@ def unzip_download(filepath):
     # Unzip the backup
 
     try:
-        subprocess.run(['7z', 'x', filepath, '-y', f'-o{ZIP_STORAGE_PATH}', f'-p{ZIP_PASSWORD}'], check=True)
+        subprocess.run(['7z', 'x', filepath, '-y',
+                       f'-o{ZIP_STORAGE_PATH}', f'-p{ZIP_PASSWORD}'], check=True)
         print(f"Backup unzipped in {ZIP_STORAGE_PATH}.")
     except subprocess.CalledProcessError as e:
         print(f"Error unzipping: {e}")
@@ -255,6 +264,35 @@ def initialize_ssh_client():
     print("Sftp connection opened.")
 
 
+def clean_storage_dirs(type):
+    # Clean up storage directory
+    print("Cleaning up storage directory...")
+
+    for root, dirs, files in os.walk(STORAGE_PATH):
+        for file in files:
+            file_path = os.path.join(root, file)
+            file_creation_time = os.path.getctime(file_path)
+
+            # IF type is database only traverse database subdirectory
+            if type == "database" and "database" not in file_path:
+                continue
+
+            # IF type is files only traverse files subdirectory
+            if type == "files" and "files" not in file_path:
+                continue
+
+            if type == "database":
+                # 2 Weeks
+                if time.time() - file_creation_time > 1209600:
+                    os.remove(file_path)
+                    print(f"Removed {file_path}.")
+            else:
+                # 4 months
+                if time.time() - file_creation_time > 10520000:
+                    os.remove(file_path)
+                    print(f"Removed {file_path}.")
+
+
 def main():
     try:
         initialize_ssh_client()
@@ -266,6 +304,9 @@ def main():
             sys.exit(1)
 
         backup_file_path = download_backup(latest_backup_url)
+
+        # Cleanup! We only want 2 weeks of backups, anything older needs to go
+        clean_storage_dirs()
 
         if UNZIP:
             child = pexpect.spawn('fmsadmin CLOSE "MasterApp.fmp12" -ukuadmin')
@@ -281,9 +322,9 @@ def main():
             # Remove zip
             os.remove(backup_file_path)
 
-
             # Execute fileMakerSetRights.sh
-            subprocess.run(['sh', '/home/kuadmin/dev/filemaker-nightly-backup-server/fileMakerSetRights.sh'])
+            subprocess.run(
+                ['sh', '/home/kuadmin/dev/filemaker-nightly-backup-server/fileMakerSetRights.sh'])
 
             # Set database open
             print("SETTING OPEN")
