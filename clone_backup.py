@@ -1,6 +1,7 @@
 from dotenv import load_dotenv
+import subprocess
 import paramiko
-import zipfile
+import pexpect
 import curses
 import json
 import time
@@ -14,20 +15,28 @@ SFTP_PASSWORD = os.getenv('SFTP_PASSWORD') or ""
 SFTP_HOST = os.getenv('SFTP_HOST') or ""
 SFTP_PORT = os.getenv('SFTP_PORT') or ""
 
+
 LAST_BACKUP_DATABASE_DOWNLOAD_URL = os.getenv(
     'LAST_BACKUP_DATABASE_DOWNLOAD_URL') or ""
 LAST_BACKUP_FILES_DOWNLOAD_URL = os.getenv(
     'LAST_BACKUP_FILES_DOWNLOAD_URL') or ""
 
+#FILEMAKER
+FILEMAKER_PASSWORD = os.getenv('FILEMAKER_PASSWORD') or ""
+
 # ZIP
 STORAGE_PATH = os.getenv('STORAGE_PATH') or "storage"
 ZIP_PASSWORD = os.getenv('ZIP_PASSWORD') or ""
+ZIP_STORAGE_PATH = os.getenv('ZIP_STORAGE_PATH') or ""
 UNZIP = os.getenv('UNZIP') == "True"
 
 # SSH Client
 ssh_client = paramiko.SSHClient()
+ssh_client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
 stdscr = None
 sftp = None
+
+LOCAL=False
 
 
 def argv_parser():
@@ -63,6 +72,8 @@ def validate_environment_variables():
         return False
 
     if LAST_BACKUP_DATABASE_DOWNLOAD_URL == "" and LAST_BACKUP_FILES_DOWNLOAD_URL == "":
+        return False
+    if UNZIP == True and ZIP_STORAGE_PATH == "":
         return False
 
     return True
@@ -165,14 +176,15 @@ def progress_callback(transferred, total):
             speed = speed_kb_s
             speed_unit = "KB/s"
 
-        stdscr.addstr(0, 0,
-                      f"Transferred: {transferred}/{total} bytes ({percent_complete:.2f}%)")
-        stdscr.addstr(1, 0,
-                      f"Estimated Time Remaining (minutes): {estimated_time_minutes:.1f}")
-        stdscr.addstr(2, 0,
-                      f"Estimated Time Remaining (seconds): {estimated_time_remaining:.1f}")
-        stdscr.addstr(3, 0, f"Download Speed: {speed:.2f}{speed_unit}")
-        stdscr.refresh()
+        if LOCAL:
+            stdscr.addstr(0, 0,
+                          f"Transferred: {transferred}/{total} bytes ({percent_complete:.2f}%)")
+            stdscr.addstr(1, 0,
+                          f"Estimated Time Remaining (minutes): {estimated_time_minutes:.1f}")
+            stdscr.addstr(2, 0,
+                          f"Estimated Time Remaining (seconds): {estimated_time_remaining:.1f}")
+            stdscr.addstr(3, 0, f"Download Speed: {speed:.2f}{speed_unit}")
+            stdscr.refresh()
 
         progress_callback.last_call = percent_complete
 
@@ -183,28 +195,31 @@ def download_backup(file_location):
     try:
         print("Downloading backup...")
 
-        # Initialize curses
-        stdscr = curses.initscr()
-        curses.noecho()
-        curses.cbreak()
+        if LOCAL:
+            # Initialize curses
+            stdscr = curses.initscr()
+            curses.noecho()
+            curses.cbreak()
 
         # Use the latest_download_url to fetch the .json file
         file_name = file_location.split("/")[-1]
         file_path = os.path.join(STORAGE_PATH, file_name)
         sftp.get(file_location, file_path, callback=progress_callback)
 
-        # Restore terminal settings
-        curses.echo()
-        curses.nocbreak()
-        curses.endwin()
+        if LOCAL:
+            # Restore terminal settings
+            curses.echo()
+            curses.nocbreak()
+            curses.endwin()
 
         print(f"Backup downloaded as {file_name}.")
 
         return file_path
     except paramiko.SSHException as err:
-        curses.echo()
-        curses.nocbreak()
-        curses.endwin()
+        if LOCAL:
+            curses.echo()
+            curses.nocbreak()
+            curses.endwin()
 
         print(f"Request failed with error: {err}")
         sys.exit(1)
@@ -214,10 +229,9 @@ def unzip_download(filepath):
     # Unzip the backup
 
     try:
-        with zipfile.ZipFile(filepath, 'r') as zip_ref:
-            zip_ref.extractall(STORAGE_PATH, pwd=bytes(ZIP_PASSWORD, 'utf-8'))
-        print(f"Backup unzipped in {STORAGE_PATH}.")
-    except zipfile.BadZipFile as e:
+        subprocess.run(['7z', 'x', filepath, '-y', f'-o{ZIP_STORAGE_PATH}', f'-p{ZIP_PASSWORD}'], check=True)
+        print(f"Backup unzipped in {ZIP_STORAGE_PATH}.")
+    except subprocess.CalledProcessError as e:
         print(f"Error unzipping: {e}")
         sys.exit(1)
 
@@ -254,14 +268,41 @@ def main():
         backup_file_path = download_backup(latest_backup_url)
 
         if UNZIP:
+            child = pexpect.spawn('fmsadmin CLOSE "MasterApp.fmp12" -ukuadmin')
+            child.expect("password:")
+            child.sendline(FILEMAKER_PASSWORD)
+            child.expect(pexpect.EOF)
+            print("DONE")
+            print(child.before.decode())
+
             unzip_download(backup_file_path)
 
+            # Succesful zip!
+            # Remove zip
+            os.remove(backup_file_path)
+
+
+            # Execute fileMakerSetRights.sh
+            subprocess.run(['sh', '/home/kuadmin/dev/filemaker-nightly-backup-server/fileMakerSetRights.sh'])
+
+            # Set database open
+            print("SETTING OPEN")
+            child = pexpect.spawn('fmsadmin OPEN "MasterApp.fmp12" -ukuadmin')
+            child.expect("password:")
+            child.sendline(FILEMAKER_PASSWORD)
+            child.expect(pexpect.EOF)
+            print("DONE")
+            print(child.before.decode())
         pass
     finally:
         # Restore terminal settings
-        curses.echo()
-        curses.nocbreak()
-        curses.endwin()
+        try:
+            if LOCAL:
+                curses.echo()
+                curses.nocbreak()
+                curses.endwin()
+        except:
+            pass
 
         # make sure to always close the connections
         print("Closing connections...")

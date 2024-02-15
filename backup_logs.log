@@ -1,0 +1,88 @@
+Closing connections...
+Traceback (most recent call last):
+  File "/home/kuadmin/dev/filemaker-nightly-backup-server/clone_backup.py", line 299, in <module>
+    main()
+  File "/home/kuadmin/dev/filemaker-nightly-backup-server/clone_backup.py", line 267, in main
+    subprocess.run(['sudo sh'], ['/home/kuadmin/dev/filemaker-nightly-backup-server/fileMakerSetRights.sh'])
+  File "/usr/lib/python3.10/subprocess.py", line 503, in run
+    with Popen(*popenargs, **kwargs) as process:
+  File "/usr/lib/python3.10/subprocess.py", line 780, in __init__
+    raise TypeError("bufsize must be an integer")
+TypeError: bufsize must be an integer
+Closing connections...
+Traceback (most recent call last):
+  File "/home/kuadmin/dev/filemaker-nightly-backup-server/clone_backup.py", line 299, in <module>
+    main()
+  File "/home/kuadmin/dev/filemaker-nightly-backup-server/clone_backup.py", line 267, in main
+    subprocess.run(['sudo sh'], ['/home/kuadmin/dev/filemaker-nightly-backup-server/fileMakerSetRights.sh'])
+  File "/usr/lib/python3.10/subprocess.py", line 503, in run
+    with Popen(*popenargs, **kwargs) as process:
+  File "/usr/lib/python3.10/subprocess.py", line 780, in __init__
+    raise TypeError("bufsize must be an integer")
+TypeError: bufsize must be an integer
+Closing connections...
+Traceback (most recent call last):
+  File "/home/kuadmin/dev/filemaker-nightly-backup-server/clone_backup.py", line 299, in <module>
+    main()
+  File "/home/kuadmin/dev/filemaker-nightly-backup-server/clone_backup.py", line 267, in main
+    subprocess.run(['sudo sh', '/home/kuadmin/dev/filemaker-nightly-backup-server/fileMakerSetRights.sh'])
+  File "/usr/lib/python3.10/subprocess.py", line 503, in run
+    with Popen(*popenargs, **kwargs) as process:
+  File "/usr/lib/python3.10/subprocess.py", line 971, in __init__
+    self._execute_child(args, executable, preexec_fn, close_fds,
+  File "/usr/lib/python3.10/subprocess.py", line 1863, in _execute_child
+    raise child_exception_type(errno_num, err_msg, err_filename)
+FileNotFoundError: [Errno 2] No such file or directory: 'sudo sh'
+
+Error: 10904 (No applicable files for this operation)
+
+Closing connections...
+
+Error: 10904 (No applicable files for this operation)
+
+Closing connections...
+SETTING OPEN
+DONE
+
+Error: 10904 (No applicable files for this operation)
+
+Closing connections...
+SETTING OPEN
+DONE
+
+Error: 10904 (No applicable files for this operation)
+
+Closing connections...
+
+7-Zip [64] 16.02 : Copyright (c) 1999-2016 Igor Pavlov : 2016-05-21
+p7zip Version 16.02 (locale=en_US.UTF-8,Utf16=on,HugeFiles=on,64 bits,6 CPUs Intel(R) Core(TM) i5-9400T CPU @ 1.80GHz (906EA),ASM,AES-NI)
+
+Scanning the drive for archives:
+1 file, 14473261437 bytes (14 GiB)
+
+Extracting archive: storage/DAILY2023-11-16_10-40.zip
+--
+Path = storage/DAILY2023-11-16_10-40.zip
+Type = zip
+Physical Size = 14473261437
+64-bit = +
+
+Everything is Ok
+
+Size:       22144196608
+Compressed: 14473261437
+Initializing ssh client...
+SSH client initialized.
+Opening sftp connection...
+Sftp connection opened.
+Downloading last .json of type database
+Last backup location is /opt/FileMaker/FileMaker Server/Data/Databases/Backups/Daily/DAILY2023-11-16_10-40.zip
+Downloading backup...
+Backup downloaded as DAILY2023-11-16_10-40.zip.
+Backup unzipped in /opt/FileMaker/FileMaker Server/Data/.
+SETTING OPEN
+DONE
+
+Error: 10904 (No applicable files for this operation)
+
+Closing connections...
