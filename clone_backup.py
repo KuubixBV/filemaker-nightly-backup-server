@@ -90,7 +90,15 @@ def get_latest_backup_url():
         # Get the current hash from our pre-existing json
         if os.path.exists(json_path):
             with open(json_path, 'r') as json_file:
-                current_hash = json.load(json_file)['hash'] or ""
+                # Check if the file is a valid json
+                hahs = ""
+                try:
+                    hash = json.load(json_file)['hash']
+                except json.JSONDecodeError as e:
+                    print(f"Error reading json file: {e}")
+                    print("Continuing with no hash")
+
+                current_hash = hash
 
         download_url = LAST_BACKUP_DATABASE_DOWNLOAD_URL
         if backup_type == "files":
@@ -104,13 +112,17 @@ def get_latest_backup_url():
         # Parse the file and exrtact the latest backup url
         with open(json_path, 'r') as latest_backup_location:
             latest = latest_backup_location.read()
-            # Read json file
-            latest_backup = json.loads(latest)['location'] or ""
+            try:
+                # Read json file
+                latest_backup = json.loads(latest)['location'] or ""
 
-            if current_hash != "":
-                new_hash = json.loads(latest)['hash'] or ""
-                if new_hash == current_hash:
-                    should_download = False
+                if current_hash != "":
+                    new_hash = json.loads(latest)['hash'] or ""
+                    if new_hash == current_hash:
+                        should_download = False
+            except:
+                print("Error reading json file, QUITTING...")
+                sys.exit(1)
 
         if not should_download:
             print("No new backup available, QUITTING...")
