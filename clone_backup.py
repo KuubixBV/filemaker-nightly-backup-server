@@ -236,7 +236,6 @@ def download_backup(file_location):
 
 def unzip_download(filepath):
     # Unzip the backup
-
     try:
         subprocess.run(['7z', 'x', filepath, '-y',
                        f'-o{ZIP_STORAGE_PATH}', f'-p{ZIP_PASSWORD}'], check=True)
@@ -264,8 +263,8 @@ def initialize_ssh_client():
     sftp = ssh_client.open_sftp()
     print("Sftp connection opened.")
 
-
-def clean_storage_dirs(type):
+def clean_storage_dirs():
+    backup_type = argv_parser()
     # Clean up storage directory
     print("Cleaning up storage directory...")
 
@@ -275,21 +274,19 @@ def clean_storage_dirs(type):
             file_creation_time = os.path.getctime(file_path)
 
             # IF type is database only traverse database subdirectory
-            if type == "database" and "database" not in file_path:
+            if backup_type == "database" and "database" not in file_path:
                 continue
 
             # IF type is files only traverse files subdirectory
-            if type == "files" and "files" not in file_path:
+            if backup_type == "files" and "files" not in file_path:
                 continue
 
-            if type == "database":
-                # 2 Weeks
-                if time.time() - file_creation_time > 1209600:
-                    os.remove(file_path)
-                    print(f"Removed {file_path}.")
+            if backup_type == "database":
+                os.remove(file_path)
+                print(f"Removed {file_path}.")
             else:
-                # 4 months
-                if time.time() - file_creation_time > 10520000:
+                # Older than 2 months
+                if time.time() - file_creation_time > 5270000:
                     os.remove(file_path)
                     print(f"Removed {file_path}.")
 
@@ -306,9 +303,6 @@ def main():
 
         backup_file_path = download_backup(latest_backup_url)
 
-        # Cleanup! We only want 2 weeks of backups, anything older needs to go
-        clean_storage_dirs()
-
         if UNZIP:
             child = pexpect.spawn('fmsadmin CLOSE "MasterApp.fmp12" -ukuadmin')
             child.expect("password:")
@@ -321,11 +315,13 @@ def main():
 
             # Succesful zip!
             # Remove zip
-            os.remove(backup_file_path)
+            backup_type = argv_parser()
+            if backup_type == "database":
+                os.remove(backup_file_path)
 
             # Execute fileMakerSetRights.sh
-            subprocess.run(
-                ['sh', '/home/kuadmin/dev/filemaker-nightly-backup-server/fileMakerSetRights.sh'])
+            # subprocess.run(
+            #     ['sh', '/home/kuadmin/dev/filemaker-nightly-backup-server/fileMakerSetRights.sh'])
 
             # Set database open
             print("SETTING OPEN")
@@ -335,7 +331,12 @@ def main():
             child.expect(pexpect.EOF)
             print("DONE")
             print(child.before.decode())
-        pass
+
+        # Cleanup
+        clean_storage_dirs()
+
+        subprocess.run(
+            ['sh', '/home/kuadmin/dev/filemaker-nightly-backup-server/cleanFilemakerDir.sh', f'-d {ZIP_STORAGE_PATH}'])
     finally:
         # Restore terminal settings
         try:
