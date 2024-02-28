@@ -9,6 +9,7 @@ import sys
 import os
 
 dotenv_path = load_dotenv('.env')
+
 # SFTP
 SFTP_USERNAME = os.getenv('SFTP_USERNAME') or ""
 SFTP_PASSWORD = os.getenv('SFTP_PASSWORD') or ""
@@ -36,7 +37,7 @@ ssh_client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
 stdscr = None
 sftp = None
 
-LOCAL = False
+LOCAL = True
 
 
 def argv_parser():
