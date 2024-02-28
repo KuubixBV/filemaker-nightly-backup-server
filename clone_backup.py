@@ -31,14 +31,14 @@ ZIP_PASSWORD = os.getenv('ZIP_PASSWORD') or ""
 ZIP_STORAGE_PATH = os.getenv('ZIP_STORAGE_PATH') or ""
 UNZIP = os.getenv('UNZIP') == "True"
 
+# LOCAL (for curses support)
+LOCAL = os.getenv('LOCAL') == "True"
+
 # SSH Client
 ssh_client = paramiko.SSHClient()
 ssh_client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
 stdscr = None
 sftp = None
-
-LOCAL = True
-
 
 def argv_parser():
     # Parse command line arguments
