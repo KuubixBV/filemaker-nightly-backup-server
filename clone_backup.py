@@ -337,8 +337,11 @@ def main():
             print("DONE")
             print(child.before.decode())
 
-
             # Get filename
+            archive_name = os.path.basename(backup_file_path)
+            without_extension = os.path.splitext(archive_name)[0]
+            new_name = without_extension + ".fmp12"
+            full_new_path = os.path.join(ZIP_STORAGE_PATH, new_name)
             unzip_download(backup_file_path)
 
             # Succesful zip!
@@ -347,8 +350,8 @@ def main():
             if backup_type == "database":
                 os.remove(backup_file_path)
 
-             #subprocess.run(
-            #['sh', '/home/kuadmin/dev/filemaker-nightly-backup-server/file_maker_set_rights.sh'])
+            subprocess.run(
+                ['sh', '/home/kuadmin/dev/filemaker-nightly-backup-server/file_maker_set_rights.sh', f'-d{full_new_path}'])
 
             # Set database open
             print("SETTING OPEN")
