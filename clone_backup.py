@@ -1,7 +1,9 @@
 from dotenv import load_dotenv
+from pathlib import Path
 import subprocess
 import paramiko
 import pexpect
+import shutil
 import curses
 import json
 import time
@@ -131,7 +133,8 @@ def get_latest_backup_url():
                 if current_hash != "":
                     new_hash = json.loads(latest)['hash'] or ""
                     if new_hash == current_hash:
-                        should_download = False
+                        #should_download = False
+                        pass
             except:
                 print("Error reading json file, QUITTING...")
                 sys.exit(1)
@@ -244,7 +247,7 @@ def unzip_download(filepath):
         
         if rename:
             # Create temp dir to extract to
-            temp_dir = os.path.join(STORAGE_PATH, "temp")
+            temp_dir = os.path.join(ZIP_STORAGE_PATH, "temp")
             archive_name = os.path.basename(filepath)
             without_extension = os.path.splitext(archive_name)[0]
             new_name = without_extension + ".fmp12"
@@ -254,7 +257,9 @@ def unzip_download(filepath):
             subprocess.run(['7z', 'x', filepath, '-y',
                            f'-o{temp_dir}', f'-p{ZIP_PASSWORD}'], check=True)
             # Move all files to dir with archive_name, keep extension
-            subprocess.run(['mv', f'{temp_dir}/*', f'{ZIP_STORAGE_PATH}/{new_name}'], check=True)
+            for item in Path(temp_dir).iterdir():
+                if item.is_file():  # Move only files, skip directories
+                    shutil.move(str(item), f'{ZIP_STORAGE_PATH}/{new_name}')
         else:
             # Extract straight to dir
             subprocess.run(['7z', 'x', filepath, '-y',
@@ -355,7 +360,7 @@ def main():
 
             # Set database open
             print("SETTING OPEN")
-            child = pexpect.spawn('fmsadmin OPEN "MasterApp.fmp12" -ukuadmin')
+            child = pexpect.spawn(f'fmsadmin OPEN "{full_new_path}" -ukuadmin')
             child.sendline('y')
             child.expect("password:")
             child.sendline(FILEMAKER_PASSWORD)
@@ -368,7 +373,7 @@ def main():
 
         print(ZIP_STORAGE_PATH)
         subprocess.run(
-            ['sh', '/home/kuadmin/dev/filemaker-nightly-backup-server/clean_file_maker_dir.sh', f'-d{ZIP_STORAGE_PATH}'])
+            ['sh', '/home/kuadmin/dev/filemaker-nightly-backup-server/clean_filemaker_dir.sh', f'-d{ZIP_STORAGE_PATH}'])
     finally:
         # Restore terminal settings
         try:
