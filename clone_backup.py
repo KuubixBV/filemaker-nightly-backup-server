@@ -237,8 +237,29 @@ def download_backup(file_location):
 def unzip_download(filepath):
     # Unzip the backup
     try:
-        subprocess.run(['7z', 'x', filepath, '-y',
-                       f'-o{ZIP_STORAGE_PATH}', f'-p{ZIP_PASSWORD}'], check=True)
+        backup_type = argv_parser()
+        rename = False
+        if backup_type == "database":
+            rename = True
+        
+        if rename:
+            # Create temp dir to extract to
+            temp_dir = os.path.join(STORAGE_PATH, "temp")
+            archive_name = os.path.basename(filepath)
+            without_extension = os.path.splitext(archive_name)[0]
+            new_name = without_extension + ".fmp12"
+            ensure_directory_exists(temp_dir)
+
+            # Extract to temp dir
+            subprocess.run(['7z', 'x', filepath, '-y',
+                           f'-o{temp_dir}', f'-p{ZIP_PASSWORD}'], check=True)
+            # Move all files to dir with archive_name, keep extension
+            subprocess.run(['mv', f'{temp_dir}/*', f'{ZIP_STORAGE_PATH}/{new_name}'], check=True)
+        else:
+            # Extract straight to dir
+            subprocess.run(['7z', 'x', filepath, '-y',
+                           f'-o{ZIP_STORAGE_PATH}', f'-p{ZIP_PASSWORD}'], check=True)
+
         print(f"Backup unzipped in {ZIP_STORAGE_PATH}.")
     except subprocess.CalledProcessError as e:
         print(f"Error unzipping: {e}")
@@ -316,6 +337,8 @@ def main():
             print("DONE")
             print(child.before.decode())
 
+
+            # Get filename
             unzip_download(backup_file_path)
 
             # Succesful zip!
