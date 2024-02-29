@@ -320,6 +320,28 @@ def clean_storage_dirs():
                     os.remove(file_path)
                     print(f"Removed {file_path}.")
 
+def filemaker_list_files():
+    child = pexpect.spawn(f'fmsadmin LIST files -u kuadmin')
+    child.expect("password:")
+    child.sendline(FILEMAKER_PASSWORD)
+    child.expect(pexpect.EOF)
+    output = child.before.decode()
+    print(output)
+    return output 
+
+def filemaker_close_database():
+    file_list = filemaker_list_files()
+
+    for line in file_list.splitlines():
+        parts = line.strip().split(':')
+        if len(parts) > 1:
+            file_path = parts[1]
+            if not os.path.exists(file_path):
+                child = pexpect.spawn(f'fmsadmin CLOSE {file_path} -ukuadmin')
+                child.sendline('y')
+                child.expect("password:")
+                child.sendline(FILEMAKER_PASSWORD)
+                child.expect(pexpect.EOF)
 
 def main():
     try:
@@ -334,13 +356,6 @@ def main():
         backup_file_path = download_backup(latest_backup_url)
 
         if UNZIP:
-            child = pexpect.spawn('fmsadmin CLOSE "MasterApp.fmp12" -ukuadmin')
-            child.sendline('y')
-            child.expect("password:")
-            child.sendline(FILEMAKER_PASSWORD)
-            child.expect(pexpect.EOF)
-            print("DONE")
-            print(child.before.decode())
 
             # Get filename
             archive_name = os.path.basename(backup_file_path)
@@ -374,6 +389,10 @@ def main():
         print(ZIP_STORAGE_PATH)
         subprocess.run(
             ['sh', '/home/kuadmin/dev/filemaker-nightly-backup-server/clean_filemaker_dir.sh', f'-d{ZIP_STORAGE_PATH}'])
+        
+        
+        filemaker_close_database()
+
     finally:
         # Restore terminal settings
         try:
