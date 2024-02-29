@@ -270,6 +270,10 @@ def clean_storage_dirs():
 
     for root, dirs, files in os.walk(STORAGE_PATH):
         for file in files:
+            # SKIP JSON
+            if file.endswith(".json"):
+                continue
+
             file_path = os.path.join(root, file)
             file_creation_time = os.path.getctime(file_path)
 
@@ -305,6 +309,7 @@ def main():
 
         if UNZIP:
             child = pexpect.spawn('fmsadmin CLOSE "MasterApp.fmp12" -ukuadmin')
+            child.sendline('y')
             child.expect("password:")
             child.sendline(FILEMAKER_PASSWORD)
             child.expect(pexpect.EOF)
@@ -319,13 +324,13 @@ def main():
             if backup_type == "database":
                 os.remove(backup_file_path)
 
-            # Execute fileMakerSetRights.sh
-            # subprocess.run(
-            #     ['sh', '/home/kuadmin/dev/filemaker-nightly-backup-server/fileMakerSetRights.sh'])
+             #subprocess.run(
+            #['sh', '/home/kuadmin/dev/filemaker-nightly-backup-server/file_maker_set_rights.sh'])
 
             # Set database open
             print("SETTING OPEN")
             child = pexpect.spawn('fmsadmin OPEN "MasterApp.fmp12" -ukuadmin')
+            child.sendline('y')
             child.expect("password:")
             child.sendline(FILEMAKER_PASSWORD)
             child.expect(pexpect.EOF)
@@ -335,8 +340,9 @@ def main():
         # Cleanup
         clean_storage_dirs()
 
+        print(ZIP_STORAGE_PATH)
         subprocess.run(
-            ['sh', '/home/kuadmin/dev/filemaker-nightly-backup-server/cleanFilemakerDir.sh', f'-d {ZIP_STORAGE_PATH}'])
+            ['sh', '/home/kuadmin/dev/filemaker-nightly-backup-server/clean_file_maker_dir.sh', f'-d{ZIP_STORAGE_PATH}'])
     finally:
         # Restore terminal settings
         try:

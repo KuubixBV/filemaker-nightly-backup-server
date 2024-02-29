@@ -7,18 +7,14 @@ do
 done
 
 cd /home/kuadmin/dev/filemaker-nightly-backup-server
-if [[ $type = "files" ]]
+if [ $type = "files" ]
 then
 	echo "FILES"
-	source ./backup_env/bin/activate
-	python ./clone_backup.py --backup-type files
-	deactivate
-elif [[ $type = "database" ]]
+	./backup_env/bin/python3 ./clone_backup.py --backup-type files
+elif [ $type = "database" ]
 then
 	echo "DATABASE"
-	source ./backup_env/bin/activate
-	python ./clone_backup.py --backup-type database
-	deactivate
+	./backup_env/bin/python3 ./clone_backup.py --backup-type database
 else
     echo "Invalid flag value, accepted values are 'files,database'."
 fi

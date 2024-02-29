@@ -10,4 +10,4 @@ while getopts "d:" opt; do
   esac
 done
 
-find $DIR -name "*.fmp12" ! -name "dev.fmp12" -type f -mtime +14 -exec rm {} +
+find "$DIR" -name "*.fmp12" ! -name "dev.fmp12" -type f -mtime +14 -exec rm {} +
