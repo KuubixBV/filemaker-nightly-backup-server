@@ -133,8 +133,7 @@ def get_latest_backup_url():
                 if current_hash != "":
                     new_hash = json.loads(latest)['hash'] or ""
                     if new_hash == current_hash:
-                        #should_download = False
-                        pass
+                        should_download = False
             except:
                 print("Error reading json file, QUITTING...")
                 sys.exit(1)
@@ -333,15 +332,21 @@ def filemaker_close_database():
     file_list = filemaker_list_files()
 
     for line in file_list.splitlines():
+        print(line)
         parts = line.strip().split(':')
+        print(parts)
         if len(parts) > 1:
             file_path = parts[1]
+            print(file_path)
             if not os.path.exists(file_path):
-                child = pexpect.spawn(f'fmsadmin CLOSE {file_path} -ukuadmin')
+                db_name = os.path.basename(file_path)
+                print(f'fmsadmin CLOSE {db_name} -ukuadmin')
+                child = pexpect.spawn(f'fmsadmin CLOSE {db_name} -ukuadmin')
                 child.sendline('y')
                 child.expect("password:")
                 child.sendline(FILEMAKER_PASSWORD)
                 child.expect(pexpect.EOF)
+                print (child.before.decode())
 
 def main():
     try:
