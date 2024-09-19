@@ -244,6 +244,7 @@ def unzip_download(filepath):
         if backup_type == "database":
             rename = True
         
+        print("Rename", rename)
         if rename:
             # Create temp dir to extract to
             temp_dir = os.path.join(ZIP_STORAGE_PATH, "temp")
@@ -252,13 +253,19 @@ def unzip_download(filepath):
             new_name = without_extension + ".fmp12"
             ensure_directory_exists(temp_dir)
 
+            print("Extracting to ", temp_dir)
             # Extract to temp dir
             subprocess.run(['7z', 'x', filepath, '-y',
                            f'-o{temp_dir}', f'-p{ZIP_PASSWORD}'], check=True)
             # Move all files to dir with archive_name, keep extension
-            for item in Path(temp_dir).iterdir():
-                if item.is_file():  # Move only files, skip directories
-                    shutil.move(str(item), f'{ZIP_STORAGE_PATH}/{new_name}')
+            databases_dir = Path(temp_dir) / 'Databases'
+            if databases_dir.exists() and databases_dir.is_dir():
+                print("EXISTS!")
+                for item in databases_dir.iterdir():
+                    print("ITEM: ", item)
+                    if item.is_file():  # Move only files, skip directories
+                        shutil.move(str(item), f'{ZIP_STORAGE_PATH}/{new_name}')
+                        print(f'Moved file to {ZIP_STORAGE_PATH}/{new_name}')
         else:
             # Extract straight to dir
             subprocess.run(['7z', 'x', filepath, '-y',
