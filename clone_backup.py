@@ -428,4 +428,6 @@ if __name__ == "__main__":
         sys.exit(1)
 
     ensure_directory_exists(STORAGE_PATH)
+    ensure_directory_exists(STORAGE_PATH + "database")
+    ensure_directory_exists(STORAGE_PATH + "files")
     main()
