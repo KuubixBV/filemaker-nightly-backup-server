@@ -18,7 +18,6 @@ SFTP_PASSWORD = os.getenv('SFTP_PASSWORD') or ""
 SFTP_HOST = os.getenv('SFTP_HOST') or ""
 SFTP_PORT = os.getenv('SFTP_PORT') or ""
 
-
 LAST_BACKUP_DATABASE_DOWNLOAD_URL = os.getenv(
     'LAST_BACKUP_DATABASE_DOWNLOAD_URL') or ""
 LAST_BACKUP_FILES_DOWNLOAD_URL = os.getenv(
@@ -33,8 +32,8 @@ ZIP_PASSWORD = os.getenv('ZIP_PASSWORD') or ""
 ZIP_STORAGE_PATH = os.getenv('ZIP_STORAGE_PATH') or ""
 UNZIP = os.getenv('UNZIP') == "True"
 
-# LOCAL (for curses support)
-LOCAL = os.getenv('LOCAL') == "True"
+# LOCAL (for progress callback)
+LOCAL = '--local' in sys.argv
 
 # SSH Client
 ssh_client = paramiko.SSHClient()
@@ -59,6 +58,10 @@ def argv_parser():
 
     return backup_type
 
+def ensure_directory_exists(path):
+    # Create the directory if it doesn't exist
+    if not os.path.exists(path):
+        os.makedirs(path)
 
 def validate_environment_variables():
     # Validate environment variables
@@ -81,16 +84,45 @@ def validate_environment_variables():
 
     return True
 
+def filter_backups():
+    # Filter json files to get the latest backup
 
-def ensure_directory_exists(path):
-    # Create the directory if it doesn't exist
-    if not os.path.exists(path):
-        os.makedirs(path)
+    # Determine backup type
+    backup_type = argv_parser()
 
+    # Gets the storage path
+    storage_path = STORAGE_PATH + "/database/json"
+    storage = os.listdir(storage_path)
 
+    # Set the latest backup json name
+    json_name = storage[len(storage) - 1]
+    latest_backup_file = os.path.join(storage_path, json_name)
+    with open(latest_backup_file, 'r') as file:
+        json_data = json.load(file)
+        json_time = json_data.get("time", None)
+
+    # Search trough all files in the JSON storage
+    for file in storage:
+        file_path = os.path.join(storage_path, file)
+        with open(file_path, 'r') as file:
+            json_data_file = json.load(file)
+            json_time_file = json_data_file.get("time", None)
+
+        # Check if the time is before or not
+        if json_time_file < json_time:
+            new_name = f"backup_{json_time_file}.json"
+            new_path = os.path.join(storage_path, new_name)
+        else:
+            # if the time is recent (is actually a safe state so the latest file always be called last_backup)
+            new_name = f"last_backup_{backup_type}.json"
+            new_path = os.path.join(storage_path, new_name)
+
+        # Rename the file
+        if new_name not in storage:
+            os.rename(file_path, new_path)
+                
 def get_latest_backup_url():
     # Use the latest_download_url to fetch the .json file
-
     try:
         # Determine backup type
         backup_type = argv_parser()
@@ -98,7 +130,11 @@ def get_latest_backup_url():
         print(f"Downloading last .json of type {backup_type}")
 
         json_name = f"last_backup_{backup_type}.json"
-        json_path = os.path.join(STORAGE_PATH, json_name)
+        storage_path = STORAGE_PATH + "/database/json"
+        ensure_directory_exists(storage_path)
+        if len(os.listdir(storage_path)) > 0:
+            filter_backups()
+        json_path = os.path.join(storage_path, json_name)
 
         current_hash = ""
         # Get the current hash from our pre-existing json
@@ -150,7 +186,6 @@ def get_latest_backup_url():
         print(f"Request failed with error: {err}")
         sys.exit(1)
 
-
 def progress_callback(transferred, total):
     # Display progress
 
@@ -191,13 +226,12 @@ def progress_callback(transferred, total):
 
         progress_callback.last_call = percent_complete
 
-
 def download_backup(file_location):
     # Download the backup
     global stdscr
     try:
         print("Downloading backup...")
-
+        
         if LOCAL:
             # Initialize curses
             stdscr = curses.initscr()
@@ -210,9 +244,11 @@ def download_backup(file_location):
 
         storage_path = STORAGE_PATH
         if backup_type == "files":
-            storage_path += "/files"
+            ensure_directory_exists(storage_path + "/files/zip")
+            storage_path += "/files/zip"
         else:
-            storage_path += "/database"
+            ensure_directory_exists(storage_path + "/database/zip")
+            storage_path += "/database/zip"
 
         file_path = os.path.join(storage_path, file_name)
         sftp.get(file_location, file_path, callback=progress_callback)
@@ -231,10 +267,9 @@ def download_backup(file_location):
             curses.echo()
             curses.nocbreak()
             curses.endwin()
-
+            
         print(f"Request failed with error: {err}")
         sys.exit(1)
-
 
 def unzip_download(filepath):
     # Unzip the backup
@@ -275,7 +310,6 @@ def unzip_download(filepath):
     except subprocess.CalledProcessError as e:
         print(f"Error unzipping: {e}")
         sys.exit(1)
-
 
 def initialize_ssh_client():
     # Initialize the ssh client
@@ -402,7 +436,6 @@ def main():
         subprocess.run(
             ['sh', '/home/kuadmin/dev/filemaker-nightly-backup-server/clean_filemaker_dir.sh', f'-d{ZIP_STORAGE_PATH}'])
         
-        
         filemaker_close_database()
 
     finally:
@@ -428,6 +461,4 @@ if __name__ == "__main__":
         sys.exit(1)
 
     ensure_directory_exists(STORAGE_PATH)
-    ensure_directory_exists(STORAGE_PATH + "database")
-    ensure_directory_exists(STORAGE_PATH + "files")
     main()
